@@ -12,7 +12,7 @@ const TEAMS = [
   { name: "Kwi",           players: ["Nick Kurtz","Giancarlo Stanton","Kazuma Okamoto","George Springer","Salvador Perez","Chase DeLauter","Brandon Nimmo","Rafael Devers"] },
   { name: "Raybeck",       players: ["Eugenio Suarez","Shea Langeliers","Ketel Marte","Corbin Carroll","Roman Anthony","Jake Burger","Freddie Freeman","Drake Baldwin"] },
   { name: "Morello",       players: ["Junior Caminero","Yordan Alvarez","Kyle Tucker","James Wood","Riley Greene","Jac Caglianone","Spencer Torkelson","Wilyer Abreu"] },
-  { name: "Gillman",       players: ["Vlad Guerrero Jr","Austin Riley","Jo Adell","Cody Bellinger","Max Muncy","Triston Casas","Kerry Carpenter","Andy Pages"] },
+  { name: "Gillman",       players: ["Vladimir Guerrero Jr.","Austin Riley","Jo Adell","Cody Bellinger","Max Muncy","Triston Casas","Kerry Carpenter","Andy Pages"] },
 ];
 
 const MONTHS = ["March/April","May","June","July","August","September"];
