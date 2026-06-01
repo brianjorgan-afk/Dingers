@@ -29,7 +29,16 @@ function teamSeasonScore(team, data) {
 function teamMonthScore(team, data, month) {
   return team.players.reduce((s,p) => s + (Number(data[p]?.byMonth?.[month])||0), 0);
 }
-function teamLast5(team, data) {
+function teamLast5(team, data, selectedMonth) {
+  if (selectedMonth === 'Total') {
+    // Only count last5 for players in the top 5 by season total
+    const ranked = team.players
+      .map(p => ({ name: p, total: playerTotal(data[p]), last5: Number(data[p]?.last5)||0 }))
+      .sort((a,b) => b.total - a.total)
+      .slice(0, 5);
+    return ranked.reduce((s,p) => s + p.last5, 0);
+  }
+  // For monthly tabs, all players count
   return team.players.reduce((s,p) => s + (Number(data[p]?.last5)||0), 0);
 }
 function coldColor(rank, total) {
@@ -76,7 +85,7 @@ export default function Home() {
     const score = selectedMonth === 'Total'
       ? teamSeasonScore(team, data)
       : teamMonthScore(team, data, selectedMonth);
-    const last5 = teamLast5(team, data);
+    const last5 = teamLast5(team, data, selectedMonth);
     const playerRows = team.players.map(p => ({
       name: p,
       total: playerTotal(data[p]),
