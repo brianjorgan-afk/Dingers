@@ -44,19 +44,28 @@ async function getPlayerHRs(playerId) {
   const games = data.stats?.[0]?.splits ?? [];
 
   const byMonth = { "March/April":0, "May":0, "June":0, "July":0, "August":0, "September":0 };
+  let last5 = 0;
+
+  const fiveDaysAgo = new Date();
+  fiveDaysAgo.setDate(fiveDaysAgo.getDate() - 5);
+  fiveDaysAgo.setHours(0, 0, 0, 0);
+
   for (const g of games) {
-    const mo = new Date(g.date + "T12:00:00").getMonth();
+    const gameDate = new Date(g.date + "T12:00:00");
+    const mo = gameDate.getMonth();
     const mn = monthName(mo);
-    if (mn) byMonth[mn] += (g.stat?.homeRuns ?? 0);
+    const hrs = g.stat?.homeRuns ?? 0;
+    if (mn) byMonth[mn] += hrs;
+    if (gameDate >= fiveDaysAgo) last5 += hrs;
   }
-  return byMonth;
+
+  return { byMonth, last5 };
 }
 
 export async function GET() {
   const results = {};
-
-  // Process in batches of 5 to avoid hammering the API
   const batchSize = 5;
+
   for (let i = 0; i < ALL_PLAYERS.length; i += batchSize) {
     const batch = ALL_PLAYERS.slice(i, i + batchSize);
     await Promise.all(batch.map(async (name) => {
@@ -65,10 +74,10 @@ export async function GET() {
         if (id) {
           results[name] = await getPlayerHRs(id);
         } else {
-          results[name] = { "March/April":0,"May":0,"June":0,"July":0,"August":0,"September":0 };
+          results[name] = { byMonth: { "March/April":0,"May":0,"June":0,"July":0,"August":0,"September":0 }, last5: 0 };
         }
       } catch {
-        results[name] = { "March/April":0,"May":0,"June":0,"July":0,"August":0,"September":0 };
+        results[name] = { byMonth: { "March/April":0,"May":0,"June":0,"July":0,"August":0,"September":0 }, last5: 0 };
       }
     }));
   }
