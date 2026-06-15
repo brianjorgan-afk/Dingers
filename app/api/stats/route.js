@@ -37,7 +37,7 @@ async function searchPlayer(name) {
   console.log(`${name} → id:${person.id} teamId:${person.currentTeam?.id}`);
   return { id: person.id, teamId: person.currentTeam?.id };
 }
-}
+
 
 async function getPlayerHRs(playerId) {
   const year = new Date().getFullYear();
