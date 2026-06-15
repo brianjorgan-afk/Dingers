@@ -99,7 +99,7 @@ function RecentHRs({ last1, last5, rank }) {
         <div style={{ fontSize:'9px', color:last1>0?activeColor:fadedColor, fontWeight:last1>0?'bold':'normal' }}>
           {last1>0?`+${last1}`:'—'}
         </div>
-        <div style={{ fontSize:'8px', color:fadedColor }}>today</div>
+        <div style={{ fontSize:'8px', color:fadedColor }}>1 day</div>
       </div>
       <div style={{ width:'1px', background:'rgba(255,255,255,0.2)', alignSelf:'stretch' }}/>
       <div style={{ textAlign:'center' }}>
@@ -119,7 +119,7 @@ function PlayerRecentHRs({ last1, last5 }) {
         <div style={{ fontSize:'9px', fontFamily:'monospace', color:last1>0?'rgba(255,220,100,0.9)':'rgba(204,232,248,0.3)', fontWeight:last1>0?'bold':'normal' }}>
           {last1>0?`+${last1}`:'—'}
         </div>
-        <div style={{ fontSize:'7px', color:'rgba(204,232,248,0.35)' }}>today</div>
+        <div style={{ fontSize:'7px', color:'rgba(204,232,248,0.35)' }}>1 day</div>
       </div>
       <div style={{ width:'1px', background:'rgba(255,255,255,0.15)', alignSelf:'stretch' }}/>
       <div style={{ textAlign:'center' }}>
