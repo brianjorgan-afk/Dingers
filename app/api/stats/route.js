@@ -34,8 +34,15 @@ async function searchPlayer(name) {
   const normName = normalizeName(name);
   const exact = data.people.find(p => normalizeName(p.fullName) === normName);
   const person = exact || data.people[0];
-  console.log(`${name} → id:${person.id} teamId:${person.currentTeam?.id}`);
-  return { id: person.id, teamId: person.currentTeam?.id };
+  const playerId = person.id;
+
+  // currentTeam may not be in search results — do a second lookup
+  const playerUrl = `https://statsapi.mlb.com/api/v1/people/${playerId}?hydrate=currentTeam`;
+  const playerRes = await fetch(playerUrl, { cache: 'no-store' });
+  const playerData = await playerRes.json();
+  const teamId = playerData.people?.[0]?.currentTeam?.id;
+
+  return { id: playerId, teamId };
 }
 
 
