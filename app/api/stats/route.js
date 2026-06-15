@@ -28,13 +28,15 @@ function normalizeName(name) {
 
 async function searchPlayer(name) {
   const url = `https://statsapi.mlb.com/api/v1/people/search?names=${encodeURIComponent(name)}&sportId=1`;
-  const res = await fetch(url, { next: { revalidate: 3600 } });
+  const res = await fetch(url, { cache: 'no-store' });
   const data = await res.json();
   if (!data.people?.length) return null;
   const normName = normalizeName(name);
   const exact = data.people.find(p => normalizeName(p.fullName) === normName);
   const person = exact || data.people[0];
+  console.log(`${name} → id:${person.id} teamId:${person.currentTeam?.id}`);
   return { id: person.id, teamId: person.currentTeam?.id };
+}
 }
 
 async function getPlayerHRs(playerId) {
