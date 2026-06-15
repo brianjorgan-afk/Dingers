@@ -63,9 +63,9 @@ async function getPlayerHRs(playerId) {
   fiveDaysAgo.setDate(fiveDaysAgo.getDate() - 5);
   fiveDaysAgo.setHours(0,0,0,0);
 
-  const oneDayAgo = new Date(now);
-  oneDayAgo.setDate(oneDayAgo.getDate() - 1);
-  oneDayAgo.setHours(0,0,0,0);
+const oneDayAgo = new Date(now);
+oneDayAgo.setDate(oneDayAgo.getDate() - 1);
+oneDayAgo.setUTCHours(14,0,0,0); // 14:00 UTC = 10am Eastern
 
   for (const g of games) {
     const gameDate = new Date(g.date + "T12:00:00");
