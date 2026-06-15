@@ -1,13 +1,13 @@
 const ALL_PLAYERS = [
   "Aaron Judge","Gunnar Henderson","Mookie Betts","Marcell Ozuna","Tyler Soderstrom","Jackson Chourio","CJ Abrams","Daulton Varsho",
-  "Juan Soto","Jose Ramirez","Vinnie Pasquantino","Manny Machado","Pete Crow-Armstrong","Alex Bregman","Seiya Suzuki","Wyatt Langford",
-  "Shohei Ohtani","Julio Rodriguez","Bobby Witt Jr","Jazz Chisholm","Bryce Harper","Taylor Ward","Colson Montgomery","Matt Chapman",
-  "Matt Olson","Adolis Garcia","Teoscar Hernandez","Christian Walker","Nolan Gorman","Oneil Cruz","Christopher Morel","Isaac Paredes",
-  "Kyle Schwarber","Ronald Acuna Jr","Fernando Tatis Jr","Ben Rice","Mike Trout","Brandon Lowe","Kyle Stowers","Mickey Moniak",
+  "Juan Soto","José Ramírez","Vinnie Pasquantino","Manny Machado","Pete Crow-Armstrong","Alex Bregman","Seiya Suzuki","Wyatt Langford",
+  "Shohei Ohtani","Julio Rodríguez","Bobby Witt Jr","Jazz Chisholm Jr.","Bryce Harper","Taylor Ward","Colson Montgomery","Matt Chapman",
+  "Matt Olson","Adolis García","Teoscar Hernández","Christian Walker","Nolan Gorman","Oneil Cruz","Christopher Morel","Isaac Paredes",
+  "Kyle Schwarber","Ronald Acuña Jr.","Fernando Tatis Jr.","Ben Rice","Mike Trout","Brandon Lowe","Kyle Stowers","Mickey Moniak",
   "Cal Raleigh","Elly De La Cruz","Michael Busch","Francisco Lindor","Corey Seager","Christian Yelich","Ian Happ","Trevor Story",
   "Pete Alonso","Brent Rooker","Munetaka Murakami","Byron Buxton","Hunter Goodman","Zach Neto","Willy Adames","Jackson Merrill",
   "Nick Kurtz","Giancarlo Stanton","Kazuma Okamoto","George Springer","Salvador Perez","Chase DeLauter","Brandon Nimmo","Rafael Devers",
-  "Eugenio Suarez","Shea Langeliers","Ketel Marte","Corbin Carroll","Roman Anthony","Jake Burger","Freddie Freeman","Drake Baldwin",
+  "Eugenio Suárez","Shea Langeliers","Ketel Marte","Corbin Carroll","Roman Anthony","Jake Burger","Freddie Freeman","Drake Baldwin",
   "Junior Caminero","Yordan Alvarez","Kyle Tucker","James Wood","Riley Greene","Jac Caglianone","Spencer Torkelson","Wilyer Abreu",
   "Vladimir Guerrero Jr.","Austin Riley","Jo Adell","Cody Bellinger","Max Muncy","Triston Casas","Kerry Carpenter","Andy Pages",
 ];
@@ -33,7 +33,8 @@ async function searchPlayer(name) {
   if (!data.people?.length) return null;
   const normName = normalizeName(name);
   const exact = data.people.find(p => normalizeName(p.fullName) === normName);
-  return (exact || data.people[0]).id;
+  const person = exact || data.people[0];
+  return { id: person.id, teamId: person.currentTeam?.id };
 }
 
 async function getPlayerHRs(playerId) {
@@ -43,12 +44,19 @@ async function getPlayerHRs(playerId) {
   const data = await res.json();
   const games = data.stats?.[0]?.splits ?? [];
 
-  const byMonth = { "March/April":0, "May":0, "June":0, "July":0, "August":0, "September":0 };
+  const byMonth = { "March/April":0,"May":0,"June":0,"July":0,"August":0,"September":0 };
   let last5 = 0;
+  let last1 = 0;
 
-  const fiveDaysAgo = new Date();
+  const now = new Date();
+
+  const fiveDaysAgo = new Date(now);
   fiveDaysAgo.setDate(fiveDaysAgo.getDate() - 5);
-  fiveDaysAgo.setHours(0, 0, 0, 0);
+  fiveDaysAgo.setHours(0,0,0,0);
+
+  const oneDayAgo = new Date(now);
+  oneDayAgo.setDate(oneDayAgo.getDate() - 1);
+  oneDayAgo.setHours(0,0,0,0);
 
   for (const g of games) {
     const gameDate = new Date(g.date + "T12:00:00");
@@ -57,27 +65,94 @@ async function getPlayerHRs(playerId) {
     const hrs = g.stat?.homeRuns ?? 0;
     if (mn) byMonth[mn] += hrs;
     if (gameDate >= fiveDaysAgo) last5 += hrs;
+    if (gameDate >= oneDayAgo)   last1 += hrs;
   }
 
-  return { byMonth, last5 };
+  return { byMonth, last5, last1 };
+}
+
+async function getTeamGameStatus(teamId) {
+  if (!teamId) return { status: 'unknown' };
+
+  try {
+    const now = new Date();
+    const today = now.toISOString().split('T')[0];
+
+    const todayUrl = `https://statsapi.mlb.com/api/v1/schedule?sportId=1&teamId=${teamId}&date=${today}&hydrate=linescore`;
+    const todayRes = await fetch(todayUrl, { next: { revalidate: 60 } });
+    const todayData = await todayRes.json();
+    const todayGames = todayData.dates?.[0]?.games ?? [];
+
+    for (const game of todayGames) {
+      const abstractState = game.status?.abstractGameState;
+      const codedState    = game.status?.codedGameState;
+      const detailedState = game.status?.detailedState ?? '';
+
+      if (
+        abstractState === 'Live' ||
+        codedState === 'I' || codedState === 'M' || codedState === 'N' ||
+        detailedState.toLowerCase().includes('progress') ||
+        detailedState.toLowerCase().includes('delay')
+      ) {
+        return { status: 'live' };
+      }
+
+      if (abstractState === 'Final' || codedState === 'F' || codedState === 'O') {
+        continue;
+      }
+
+      return { status: 'today', gameTime: game.gameDate };
+    }
+
+    const startDate = new Date(now);
+    startDate.setDate(startDate.getDate() + 1);
+    const endDate = new Date(now);
+    endDate.setDate(endDate.getDate() + 7);
+
+    const nextUrl = `https://statsapi.mlb.com/api/v1/schedule?sportId=1&teamId=${teamId}&startDate=${startDate.toISOString().split('T')[0]}&endDate=${endDate.toISOString().split('T')[0]}`;
+    const nextRes = await fetch(nextUrl, { next: { revalidate: 3600 } });
+    const nextData = await nextRes.json();
+    const nextDates = nextData.dates ?? [];
+
+    if (nextDates.length > 0 && nextDates[0].games?.length > 0) {
+      return { status: 'upcoming', gameTime: nextDates[0].games[0].gameDate };
+    }
+
+    return { status: 'unknown' };
+  } catch {
+    return { status: 'unknown' };
+  }
 }
 
 export async function GET() {
   const results = {};
+  const teamGameCache = {};
   const batchSize = 5;
 
   for (let i = 0; i < ALL_PLAYERS.length; i += batchSize) {
     const batch = ALL_PLAYERS.slice(i, i + batchSize);
     await Promise.all(batch.map(async (name) => {
       try {
-        const id = await searchPlayer(name);
-        if (id) {
-          results[name] = await getPlayerHRs(id);
+        const player = await searchPlayer(name);
+        if (player) {
+          const gameStatus = teamGameCache[player.teamId]
+            ?? await getTeamGameStatus(player.teamId);
+          if (player.teamId) teamGameCache[player.teamId] = gameStatus;
+          const hrData = await getPlayerHRs(player.id);
+          results[name] = { ...hrData, gameStatus };
         } else {
-          results[name] = { byMonth: { "March/April":0,"May":0,"June":0,"July":0,"August":0,"September":0 }, last5: 0 };
+          results[name] = {
+            byMonth: { "March/April":0,"May":0,"June":0,"July":0,"August":0,"September":0 },
+            last5: 0, last1: 0,
+            gameStatus: { status: 'unknown' },
+          };
         }
       } catch {
-        results[name] = { byMonth: { "March/April":0,"May":0,"June":0,"July":0,"August":0,"September":0 }, last5: 0 };
+        results[name] = {
+          byMonth: { "March/April":0,"May":0,"June":0,"July":0,"August":0,"September":0 },
+          last5: 0, last1: 0,
+          gameStatus: { status: 'unknown' },
+        };
       }
     }));
   }
