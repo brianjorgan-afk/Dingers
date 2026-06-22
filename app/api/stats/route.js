@@ -137,9 +137,10 @@ async function getTeamGameStatus(teamId) {
     }
 
     return { status: 'unknown' };
-  } catch {
-    return { status: 'unknown' };
-  }
+ } catch (err) {
+  console.error(`getTeamGameStatus failed for teamId ${teamId}:`, err.message);
+  return { status: 'unknown' };
+}
 }
 
 export async function GET() {
