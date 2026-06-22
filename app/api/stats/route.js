@@ -63,9 +63,18 @@ async function getPlayerHRs(playerId) {
   fiveDaysAgo.setDate(fiveDaysAgo.getDate() - 5);
   fiveDaysAgo.setHours(0,0,0,0);
 
-const oneDayAgo = new Date(now);
-oneDayAgo.setDate(oneDayAgo.getDate() - 1);
-oneDayAgo.setUTCHours(14,0,0,0); // 14:00 UTC = 10am Eastern
+// Build "10am Eastern" cutoff entirely in UTC to avoid local/UTC mixing bugs
+const nowUTC = new Date();
+const cutoff = new Date(Date.UTC(
+  nowUTC.getUTCFullYear(),
+  nowUTC.getUTCMonth(),
+  nowUTC.getUTCDate(),
+  14, 0, 0, 0  // 14:00 UTC = 10am Eastern (EDT)
+));
+// If it's currently before today's 10am cutoff, use yesterday's cutoff instead
+const oneDayAgo = nowUTC < cutoff
+  ? new Date(cutoff.getTime() - 24*60*60*1000)
+  : cutoff;
 
   for (const g of games) {
     const gameDate = new Date(g.date + "T12:00:00");
