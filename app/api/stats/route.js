@@ -94,8 +94,11 @@ async function getTeamGameStatus(teamId) {
 
   try {
     const now = new Date();
-    const today = now.toISOString().split('T')[0];
-
+    const today = now.toISOString().split('T')[0];const todayEastern = new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'America/New_York',
+  year: 'numeric', month: '2-digit', day: '2-digit',
+}).format(now); // returns YYYY-MM-DD in Eastern time
+const today = todayEastern;
     const todayUrl = `https://statsapi.mlb.com/api/v1/schedule?sportId=1&teamId=${teamId}&date=${today}&hydrate=linescore`;
     const todayRes = await fetch(todayUrl, { next: { revalidate: 60 } });
     const todayData = await todayRes.json();
