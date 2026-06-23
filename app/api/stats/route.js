@@ -59,36 +59,43 @@ async function getPlayerHRs(playerId) {
 
   const now = new Date();
 
+  // Get "today" and "10am cutoff day" as Eastern calendar date strings (YYYY-MM-DD)
+  const easternDateFmt = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/New_York', year:'numeric', month:'2-digit', day:'2-digit',
+  });
+  const easternHourFmt = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York', hour:'numeric', hour12:false,
+  });
+
+  const todayEastern = easternDateFmt.format(now); // e.g. "2026-06-22"
+  const currentEasternHour = parseInt(easternHourFmt.format(now), 10);
+
+  // If before 10am Eastern, "today" for last1 purposes is actually yesterday
+  const oneDayCutoffDate = new Date(now);
+  if (currentEasternHour < 10) {
+    oneDayCutoffDate.setDate(oneDayCutoffDate.getDate() - 1);
+  }
+  const oneDayDateStr = easternDateFmt.format(oneDayCutoffDate); // the "game day" that still counts as "today"
+
+  // 5-day cutoff stays simple — based on real elapsed days
   const fiveDaysAgo = new Date(now);
   fiveDaysAgo.setDate(fiveDaysAgo.getDate() - 5);
   fiveDaysAgo.setHours(0,0,0,0);
 
-// Build "10am Eastern" cutoff entirely in UTC to avoid local/UTC mixing bugs
-const nowUTC = new Date();
-const cutoff = new Date(Date.UTC(
-  nowUTC.getUTCFullYear(),
-  nowUTC.getUTCMonth(),
-  nowUTC.getUTCDate(),
-  14, 0, 0, 0  // 14:00 UTC = 10am Eastern (EDT)
-));
-// If it's currently before today's 10am cutoff, use yesterday's cutoff instead
-const oneDayAgo = nowUTC < cutoff
-  ? new Date(cutoff.getTime() - 24*60*60*1000)
-  : cutoff;
-
   for (const g of games) {
-    const gameDate = new Date(g.date + "T12:00:00");
+    const dateStr = g.date; // "YYYY-MM-DD" from MLB API, this is the game's official date
+    const gameDate = new Date(dateStr + "T12:00:00");
     const mo = gameDate.getMonth();
     const mn = monthName(mo);
     const hrs = g.stat?.homeRuns ?? 0;
+
     if (mn) byMonth[mn] += hrs;
     if (gameDate >= fiveDaysAgo) last5 += hrs;
-    if (gameDate >= oneDayAgo)   last1 += hrs;
+    if (dateStr === oneDayDateStr) last1 += hrs;
   }
 
   return { byMonth, last5, last1 };
 }
-
 async function getTeamGameStatus(teamId) {
   if (!teamId) return { status: 'unknown' };
 
