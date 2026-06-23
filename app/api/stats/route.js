@@ -145,3 +145,38 @@ async function getTeamGameStatus(teamId) {
     return { status: 'unknown' };
   }
 }
+export async function GET() {
+  const results = {};
+  const teamGameCache = {};
+  const batchSize = 5;
+
+  for (let i = 0; i < ALL_PLAYERS.length; i += batchSize) {
+    const batch = ALL_PLAYERS.slice(i, i + batchSize);
+    await Promise.all(batch.map(async (name) => {
+      try {
+        const player = await searchPlayer(name);
+        if (player) {
+          const gameStatus = teamGameCache[player.teamId]
+            ?? await getTeamGameStatus(player.teamId);
+          if (player.teamId) teamGameCache[player.teamId] = gameStatus;
+          const hrData = await getPlayerHRs(player.id);
+          results[name] = { ...hrData, gameStatus };
+        } else {
+          results[name] = {
+            byMonth: { "March/April":0,"May":0,"June":0,"July":0,"August":0,"September":0 },
+            last5: 0, last1: 0,
+            gameStatus: { status: 'unknown' },
+          };
+        }
+      } catch {
+        results[name] = {
+          byMonth: { "March/April":0,"May":0,"June":0,"July":0,"August":0,"September":0 },
+          last5: 0, last1: 0,
+          gameStatus: { status: 'unknown' },
+        };
+      }
+    }));
+  }
+
+  return Response.json({ players: results, fetchedAt: new Date().toISOString() });
+}
